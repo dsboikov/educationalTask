@@ -51,6 +51,40 @@ async def gpt_dialog(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await message.edit_text(text=answer, reply_markup=buttons)
 
 
+async def talk(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    dialog.mode = "talk"
+    await send_image(update, context, "talk")
+    text = load_message("talk")
+    await send_text_buttons(update, context, text, {
+        "talk_cobain": "Курт Кобейн",
+        "talk_queen": "Королева Елизавета II",
+        "talk_tolkien": "Джон Рональд Руэл Толкиен",
+        "talk_nietzsche": "Фридрих Ницше",
+        "talk_hawking": "Стивен Хокинг"
+    })
+
+
+async def talk_button(update, context):
+    query = update.callback_query.data
+    await update.callback_query.answer()
+    prompt = load_prompt(query)
+    chat_gpt.set_prompt(prompt)
+    greet = await chat_gpt.add_message("Поздоровайся и представься")
+    await send_image(update, context, query)
+    await send_text(update, context, greet)
+
+
+async def talk_dialog(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    buttons = await prepare_text_buttons({
+        "start": "Закончить",
+        "change_talk": "Поговорить с другими",
+    })
+    text = update.message.text
+    message = await send_text_with_prepared_buttons(update, context, 'Минуточку...', buttons)
+    answer = await chat_gpt.add_message(text)
+    await message.edit_text(text=answer, reply_markup=buttons)
+
+
 
 async def mode_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     match dialog.mode:
@@ -60,6 +94,8 @@ async def mode_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await random(update, context)
         case 'gpt':
             await gpt_dialog(update, context)
+        case 'talk':
+            await talk_dialog(update, context)
 
 
 async def cb_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -70,6 +106,18 @@ async def cb_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await start(update, context)
         case 'random_more':
             await random(update, context)
+        case 'change_talk':
+            await talk(update, context)
+        case "talk_cobain":
+            await talk_button(update, context)
+        case "talk_queen":
+            await talk_button(update, context)
+        case "talk_tolkien":
+            await talk_button(update, context)
+        case "talk_nietzsche":
+            await talk_button(update, context)
+        case "talk_hawking":
+            await talk_button(update, context)
         case _:
             await default_callback_handler(update, context)
 
@@ -80,6 +128,7 @@ commands_tuple = (
     ('start', start),
     ('random', random),
     ('gpt', gpt),
+    ('talk', talk),
 )
 
 chat_gpt = ChatGptService(ob_keys.gpt_token)
