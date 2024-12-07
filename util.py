@@ -49,6 +49,23 @@ async def send_text_buttons(update: Update, context: ContextTypes.DEFAULT_TYPE,
         message_thread_id=update.effective_message.message_thread_id)
 
 
+async def send_text_with_prepared_buttons(update: Update, context: ContextTypes.DEFAULT_TYPE,
+                                          text: str, buttons: InlineKeyboardMarkup) -> Message:
+    text = text.encode('utf16', errors='surrogatepass').decode('utf16')
+    return await context.bot.send_message(
+        update.effective_message.chat_id,
+        text=text, reply_markup=buttons,
+        message_thread_id=update.effective_message.message_thread_id)
+
+
+async def prepare_text_buttons(buttons: dict) -> InlineKeyboardMarkup:
+    keyboard = []
+    for key, value in buttons.items():
+        button = InlineKeyboardButton(str(value), callback_data=str(key))
+        keyboard.append([button])
+    return InlineKeyboardMarkup(keyboard)
+
+
 # посылает в чат фото
 async def send_image(update: Update, context: ContextTypes.DEFAULT_TYPE,
                      name: str) -> Message:
