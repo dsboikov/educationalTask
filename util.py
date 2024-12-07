@@ -9,7 +9,7 @@ from telegram.ext import ContextTypes
 def dialog_user_info_to_str(user_data) -> str:
     mapper = {'language_from': 'Язык оригинала', 'language_to': 'Язык перевода',
               'text_to_translate': 'Текст для перевода'}
-    return '\n'.join(map(lambda k, v: (mapper[k], v), user_data.items()))
+    return '\n'.join('{}{}'.format(key, val) for key, val in user_data.items())
 
 
 # посылает в чат текстовое сообщение
