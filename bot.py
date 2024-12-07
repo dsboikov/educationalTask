@@ -32,6 +32,7 @@ async def random(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "random_more": "⭐️ Ещё ⭐️",
     })
 
+
 async def mode_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     match dialog.mode:
         case 'start':
@@ -40,7 +41,7 @@ async def mode_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await random(update, context)
 
 
-async def btn_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def cb_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.callback_query.answer()
     query = update.callback_query.data
     match query:
@@ -50,7 +51,6 @@ async def btn_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await random(update, context)
         case _:
             await default_callback_handler(update, context)
-
 
 
 ob_keys = Keys()
@@ -69,8 +69,6 @@ for command, handler in commands_tuple:
 app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, mode_handler))
 app.add_handler(MessageHandler(filters.ATTACHMENT, mode_handler))
 
-# Зарегистрировать обработчик коллбэка можно так:
-# app.add_handler(CallbackQueryHandler(app_button, pattern='^app_.*'))
-app.add_handler(CallbackQueryHandler(btn_handler))
-#app.add_handler(CallbackQueryHandler(default_callback_handler))
+app.add_handler(CallbackQueryHandler(cb_handler))
+
 app.run_polling()
