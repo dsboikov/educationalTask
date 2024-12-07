@@ -90,15 +90,18 @@ async def quiz(update: Update, context: ContextTypes.DEFAULT_TYPE):
     context.user_data['mode'] = "quiz"
     context.user_data['score'] = 0
     chat_gpt.set_prompt(load_prompt("quiz"))
+    return await quiz_theme(update, context)
+
+
+async def quiz_theme(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await send_text_buttons(update, context, load_message("quiz"), {
         'quiz_prog': 'Программирование',
         'quiz_math': 'Математика',
         'quiz_biology': 'Биология',
     })
-    return quiz_theme
 
 
-async def quiz_theme(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def quiz_question(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.callback_query.answer()
     question = await chat_gpt.add_message(update.callback_query.data)
     await send_text(update, context, question)
@@ -116,14 +119,6 @@ async def quiz_answer(update: Update, context: ContextTypes.DEFAULT_TYPE):
                                 'quiz_change': 'Сменить тему',
                                 'start': 'завершить'
                             })
-
-
-async def quiz_choose(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.callback_query.answer()
-    if update.callback_query.data == 'quiz_change':
-        return quiz
-    else:
-        return quiz_answer
 
 
 async def mode_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -161,17 +156,17 @@ async def cb_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         case "talk_hawking":
             await talk_button(update, context)
         case "quiz_prog":
-            await quiz_theme(update, context)
+            await quiz_question(update, context)
         case "quiz_math":
-            await quiz_theme(update, context)
+            await quiz_question(update, context)
         case "quiz_biology":
-            await quiz_theme(update, context)
+            await quiz_question(update, context)
         case "quiz_theme":
-            await quiz_theme(update, context)
+            await quiz_question(update, context)
         case "quiz_more":
-            await quiz_theme(update, context)
+            await quiz_question(update, context)
         case "quiz_change":
-            await quiz(update, context)
+            await quiz_theme(update, context)
         case _:
             await default_callback_handler(update, context)
 
@@ -190,8 +185,6 @@ app = ApplicationBuilder().token(ob_keys.bot_token).build()
 
 for command, handler in commands_tuple:
     app.add_handler(CommandHandler(command, handler))
-
-
 
 app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, mode_handler))
 app.add_handler(MessageHandler(filters.ATTACHMENT, mode_handler))
