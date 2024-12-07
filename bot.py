@@ -15,19 +15,27 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         'random': 'Узнать случайный интересный факт 🧠',
         'gpt': 'Задать вопрос чату GPT 🤖',
         'talk': 'Поговорить с известной личностью 👤',
-        'quiz': 'Поучаствовать в квизе ❓'
-        # Добавить команду в меню можно так:
-        # 'command': 'button text'
-
+        'quiz': 'Поучаствовать в квизе ❓',
+        'help_with_resume': 'Помощь с резюме 📝',
+        'pic_recognition': 'Распознать фото 🔀',
+        'translate': 'Переводчик 🔀'
     })
 
 
+async def mode_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    match filters.COMMAND:
+        case 'start':
+            await start(update, context)
+
 ob_keys = Keys()
 dialog = Dialog()
+commands_tuple = (('start', start),)
 
 chat_gpt = ChatGptService(ob_keys.gpt_token)
 app = ApplicationBuilder().token(ob_keys.bot_token).build()
-
+#app.add_handler(CommandHandler("start", start))
+for command, handler in commands_tuple:
+    app.add_handler(CommandHandler(command, handler))
 
 # Зарегистрировать обработчик команды можно так:
 # app.add_handler(CommandHandler('command', handler_func))
