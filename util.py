@@ -112,10 +112,3 @@ async def default_callback_handler(update: Update,
     query = update.callback_query.data
     await send_html(update, context, f'You have pressed button with {query} callback')
 
-
-class Dialog:
-    def __init__(self):
-        self.user = {}
-        self.count = 0
-        self.list = []
-        self.mode = None
