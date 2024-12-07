@@ -97,4 +97,8 @@ async def default_callback_handler(update: Update,
 
 
 class Dialog:
-    pass
+    def __init__(self):
+        self.user = {}
+        self.count = 0
+        self.list = []
+        self.mode = None
