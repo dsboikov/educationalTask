@@ -3,7 +3,8 @@ from telegram.ext import ApplicationBuilder, CallbackQueryHandler, ContextTypes,
 from credentials import Keys
 from gpt import ChatGptService
 from util import (load_message, send_text, send_image, show_main_menu, default_callback_handler,
-                  load_prompt, dialog_user_info_to_str, send_text_buttons, Dialog)
+                  load_prompt, dialog_user_info_to_str, send_text_buttons, Dialog, prepare_text_buttons,
+                  send_text_with_prepared_buttons)
 
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -32,15 +33,36 @@ async def random(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "random_more": "⭐️ Ещё ⭐️",
     })
 
+
+async def gpt(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    dialog.mode = "gpt"
+    chat_gpt.set_prompt(load_prompt("gpt"))
+    await send_image(update, context, "gpt")
+    await send_text(update, context, load_message("gpt"))
+
+
+async def gpt_dialog(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    request = update.message.text
+    buttons = await prepare_text_buttons({
+        "start": "Закончить",
+    })
+    message = await send_text_with_prepared_buttons(update, context, 'Минуточку, я подумаю...', buttons)
+    answer = await chat_gpt.send_question(load_prompt("gpt"), request)
+    await message.edit_text(text=answer, reply_markup=buttons)
+
+
+
 async def mode_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     match dialog.mode:
         case 'start':
             await start(update, context)
         case 'random':
             await random(update, context)
+        case 'gpt':
+            await gpt_dialog(update, context)
 
 
-async def btn_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def cb_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.callback_query.answer()
     query = update.callback_query.data
     match query:
@@ -52,12 +74,12 @@ async def btn_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await default_callback_handler(update, context)
 
 
-
 ob_keys = Keys()
 dialog = Dialog()
 commands_tuple = (
     ('start', start),
     ('random', random),
+    ('gpt', gpt),
 )
 
 chat_gpt = ChatGptService(ob_keys.gpt_token)
@@ -69,8 +91,6 @@ for command, handler in commands_tuple:
 app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, mode_handler))
 app.add_handler(MessageHandler(filters.ATTACHMENT, mode_handler))
 
-# Зарегистрировать обработчик коллбэка можно так:
-# app.add_handler(CallbackQueryHandler(app_button, pattern='^app_.*'))
-app.add_handler(CallbackQueryHandler(btn_handler))
-#app.add_handler(CallbackQueryHandler(default_callback_handler))
+app.add_handler(CallbackQueryHandler(cb_handler))
+
 app.run_polling()
