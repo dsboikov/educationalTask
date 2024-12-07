@@ -1,14 +1,15 @@
 from telegram import Update
-from telegram.ext import ApplicationBuilder, CallbackQueryHandler, ContextTypes, CommandHandler, MessageHandler, filters
+from telegram.ext import (ApplicationBuilder, CallbackQueryHandler, ContextTypes, CommandHandler,
+                          MessageHandler, filters, ConversationHandler)
 from credentials import Keys
 from gpt import ChatGptService
 from util import (load_message, send_text, send_image, show_main_menu, default_callback_handler,
-                  load_prompt, dialog_user_info_to_str, send_text_buttons, Dialog, prepare_text_buttons,
+                  load_prompt, dialog_user_info_to_str, send_text_buttons, prepare_text_buttons,
                   send_text_with_prepared_buttons)
 
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    dialog.mode = "start"
+    context.user_data['mode'] = "start"
     text = load_message('main')
     await send_image(update, context, 'main')
     await send_text(update, context, text)
@@ -25,7 +26,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 async def random(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    dialog.mode = "random"
+    context.user_data['mode'] = "random"
     await send_image(update, context, "random")
     answer = await chat_gpt.send_question(load_prompt("random"), '')
     await send_text_buttons(update, context, answer, {
@@ -35,7 +36,7 @@ async def random(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 async def gpt(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    dialog.mode = "gpt"
+    context.user_data['mode'] = "gpt"
     chat_gpt.set_prompt(load_prompt("gpt"))
     await send_image(update, context, "gpt")
     await send_text(update, context, load_message("gpt"))
@@ -51,15 +52,92 @@ async def gpt_dialog(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await message.edit_text(text=answer, reply_markup=buttons)
 
 
+async def talk(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    context.user_data['mode'] = "talk"
+    await send_image(update, context, "talk")
+    text = load_message("talk")
+    await send_text_buttons(update, context, text, {
+        "talk_cobain": "Курт Кобейн",
+        "talk_queen": "Королева Елизавета II",
+        "talk_tolkien": "Джон Рональд Руэл Толкиен",
+        "talk_nietzsche": "Фридрих Ницше",
+        "talk_hawking": "Стивен Хокинг"
+    })
+
+
+async def talk_button(update, context):
+    query = update.callback_query.data
+    await update.callback_query.answer()
+    prompt = load_prompt(query)
+    chat_gpt.set_prompt(prompt)
+    greet = await chat_gpt.add_message("Поздоровайся и представься")
+    await send_image(update, context, query)
+    await send_text(update, context, greet)
+
+
+async def talk_dialog(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    buttons = await prepare_text_buttons({
+        "start": "Закончить",
+        "change_talk": "Поговорить с другими",
+    })
+    text = update.message.text
+    message = await send_text_with_prepared_buttons(update, context, 'Минуточку...', buttons)
+    answer = await chat_gpt.add_message(text)
+    await message.edit_text(text=answer, reply_markup=buttons)
+
+
+async def quiz(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    context.user_data['mode'] = "quiz"
+    context.user_data['score'] = 0
+    chat_gpt.set_prompt(load_prompt("quiz"))
+    await send_text_buttons(update, context, load_message("quiz"), {
+        'quiz_prog': 'Программирование',
+        'quiz_math': 'Математика',
+        'quiz_biology': 'Биология',
+    })
+    return quiz_theme
+
+
+async def quiz_theme(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.callback_query.answer()
+    question = await chat_gpt.add_message(update.callback_query.data)
+    await send_text(update, context, question)
+    return quiz_answer
+
+
+async def quiz_answer(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    answer = await chat_gpt.add_message(update.message.text)
+    if answer == 'Правильно!':
+        context.user_data['score'] = context.user_data.get('score', 0) + 1
+    await send_text_buttons(update, context,
+                            answer + '\n\nВаш счёт: ' + str(context.user_data['score']),
+                            {
+                                'quiz_more': 'Следующий вопрос',
+                                'quiz_change': 'Сменить тему',
+                                'start': 'завершить'
+                            })
+
+
+async def quiz_choose(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.callback_query.answer()
+    if update.callback_query.data == 'quiz_change':
+        return quiz
+    else:
+        return quiz_answer
+
 
 async def mode_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    match dialog.mode:
+    match context.user_data['mode']:
         case 'start':
             await start(update, context)
         case 'random':
             await random(update, context)
         case 'gpt':
             await gpt_dialog(update, context)
+        case 'talk':
+            await talk_dialog(update, context)
+        case 'quiz':
+            await quiz_answer(update, context)
 
 
 async def cb_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -70,16 +148,41 @@ async def cb_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await start(update, context)
         case 'random_more':
             await random(update, context)
+        case 'change_talk':
+            await talk(update, context)
+        case "talk_cobain":
+            await talk_button(update, context)
+        case "talk_queen":
+            await talk_button(update, context)
+        case "talk_tolkien":
+            await talk_button(update, context)
+        case "talk_nietzsche":
+            await talk_button(update, context)
+        case "talk_hawking":
+            await talk_button(update, context)
+        case "quiz_prog":
+            await quiz_theme(update, context)
+        case "quiz_math":
+            await quiz_theme(update, context)
+        case "quiz_biology":
+            await quiz_theme(update, context)
+        case "quiz_theme":
+            await quiz_theme(update, context)
+        case "quiz_more":
+            await quiz_theme(update, context)
+        case "quiz_change":
+            await quiz(update, context)
         case _:
             await default_callback_handler(update, context)
 
 
 ob_keys = Keys()
-dialog = Dialog()
 commands_tuple = (
     ('start', start),
     ('random', random),
     ('gpt', gpt),
+    ('talk', talk),
+    ('quiz', quiz),
 )
 
 chat_gpt = ChatGptService(ob_keys.gpt_token)
@@ -87,6 +190,8 @@ app = ApplicationBuilder().token(ob_keys.bot_token).build()
 
 for command, handler in commands_tuple:
     app.add_handler(CommandHandler(command, handler))
+
+
 
 app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, mode_handler))
 app.add_handler(MessageHandler(filters.ATTACHMENT, mode_handler))
