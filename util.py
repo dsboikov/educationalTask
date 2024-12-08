@@ -76,7 +76,7 @@ async def send_image(update: Update, context: ContextTypes.DEFAULT_TYPE,
 
 # отображает команду и главное меню
 async def show_main_menu(update: Update, context: ContextTypes.DEFAULT_TYPE,
-                         commands: dict):
+                         commands: dict) -> None:
     command_list = [BotCommand(key, value) for key, value in commands.items()]
     await context.bot.set_my_commands(command_list, scope=BotCommandScopeChat(
         chat_id=update.effective_chat.id))
@@ -85,7 +85,7 @@ async def show_main_menu(update: Update, context: ContextTypes.DEFAULT_TYPE,
 
 
 # Удаляем команды для конкретного чата
-async def hide_main_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def hide_main_menu(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     await context.bot.delete_my_commands(
         scope=BotCommandScopeChat(chat_id=update.effective_chat.id))
     await context.bot.set_chat_menu_button(menu_button=MenuButtonDefault(),
@@ -93,21 +93,21 @@ async def hide_main_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 # загружает сообщение из папки  /resources/messages/
-def load_message(name):
+def load_message(name) -> str:
     with open("resources/messages/" + name + ".txt", "r",
               encoding="utf8") as file:
         return file.read()
 
 
 # загружает промпт из папки  /resources/messages/
-def load_prompt(name):
+def load_prompt(name) -> str:
     with open("resources/prompts/" + name + ".txt", "r",
               encoding="utf8") as file:
         return file.read()
 
 
 async def default_callback_handler(update: Update,
-                                   context: ContextTypes.DEFAULT_TYPE):
+                                   context: ContextTypes.DEFAULT_TYPE) -> None:
     await update.callback_query.answer()
     query = update.callback_query.data
     await send_html(update, context, f'You have pressed button with {query} callback')
