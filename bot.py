@@ -20,8 +20,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         'talk': 'Поговорить с известной личностью 👤',
         'quiz': 'Поучаствовать в квизе ❓',
         'helpwithresume': 'Помощь с резюме 📝',
-        'picrecognition': 'Распознать фото 🖼️',
-        'translate': 'Переводчик 🔀'
+        'picrecognition': 'Распознать фото 🖼️'
     })
 
 
@@ -159,6 +158,16 @@ async def resume_dialog(update, context):
         await my_message.edit_text(text=answer, reply_markup=buttons)
 
 
+async def image_recognition(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    context.user_data['mode'] = "image_recognition"
+    await send_image(update, context, "image_recognition")
+    await send_text(update, context, load_message("image_recognition"))
+
+
+async def recognition_dialog(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    pass
+
+
 async def mode_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     match context.user_data['mode']:
         case 'start':
@@ -209,6 +218,8 @@ async def cb_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await quiz_theme(update, context)
         case "resume_dialog":
             await resume_dialog(update, context)
+        case "image_recognition":
+            await recognition_dialog(update, context)
         case _:
             await default_callback_handler(update, context)
 
@@ -220,8 +231,8 @@ commands_tuple = (
     ('gpt', gpt),
     ('talk', talk),
     ('quiz', quiz),
-    ('helpwithresume', resume)
-   # ('picrecognition', pic_recognition)
+    ('helpwithresume', resume),
+    ('picrecognition', image_recognition)
 )
 
 chat_gpt = ChatGptService(ob_keys.gpt_token)
