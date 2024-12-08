@@ -6,7 +6,7 @@ class ChatGptService:
     client: OpenAI = None
     message_list: list = None
 
-    def __init__(self, token):
+    def __init__(self, token) -> None:
         token = "sk-proj-" + token[:3:-1] if token.startswith('gpt:') else token
         self.client = OpenAI(
             http_client=httpx.Client(proxy="http://18.199.183.77:49232"),
@@ -38,7 +38,7 @@ class ChatGptService:
         self.message_list.append({"role": "user", "content": message_text})
         return await self.send_message_list()
 
-    async def send_question_with_image(self, prompt_text: str, image_url: str):
+    async def send_question_with_image(self, prompt_text: str, image_url: str) -> str:
         response = self.client.chat.completions.create(
             model="gpt-4o-mini",
             messages=[

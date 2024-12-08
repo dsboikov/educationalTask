@@ -1,6 +1,8 @@
+from typing import Callable, Dict, Any, Coroutine
+
 from telegram import Update
 from telegram.ext import (ApplicationBuilder, CallbackQueryHandler, ContextTypes, CommandHandler,
-                          MessageHandler, filters, ConversationHandler)
+                          MessageHandler, filters, ConversationHandler, CallbackContext, ExtBot)
 from credentials import Keys
 from gpt import ChatGptService
 from util import (load_message, send_text, send_image, show_main_menu, default_callback_handler,
@@ -9,7 +11,7 @@ from util import (load_message, send_text, send_image, show_main_menu, default_c
 from mimetypes import MimeTypes
 
 
-async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     context.user_data['mode'] = "start"
     text = load_message('main')
     await send_image(update, context, 'main')
@@ -25,7 +27,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     })
 
 
-async def random(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def random(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     context.user_data['mode'] = "random"
     await send_image(update, context, "random")
     answer = await chat_gpt.send_question(load_prompt("random"), '')
@@ -35,14 +37,14 @@ async def random(update: Update, context: ContextTypes.DEFAULT_TYPE):
     })
 
 
-async def gpt(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def gpt(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     context.user_data['mode'] = "gpt"
     chat_gpt.set_prompt(load_prompt("gpt"))
     await send_image(update, context, "gpt")
     await send_text(update, context, load_message("gpt"))
 
 
-async def gpt_dialog(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def gpt_dialog(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     request = update.message.text
     buttons = await prepare_text_buttons({
         "start": "Закончить",
@@ -52,7 +54,7 @@ async def gpt_dialog(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await message.edit_text(text=answer, reply_markup=buttons)
 
 
-async def talk(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def talk(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     context.user_data['mode'] = "talk"
     await send_image(update, context, "talk")
     text = load_message("talk")
@@ -65,7 +67,7 @@ async def talk(update: Update, context: ContextTypes.DEFAULT_TYPE):
     })
 
 
-async def talk_button(update, context):
+async def talk_button(update, context) -> None:
     query = update.callback_query.data
     await update.callback_query.answer()
     prompt = load_prompt(query)
@@ -75,7 +77,7 @@ async def talk_button(update, context):
     await send_text(update, context, greet)
 
 
-async def talk_dialog(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def talk_dialog(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     buttons = await prepare_text_buttons({
         "start": "Закончить",
         "change_talk": "Поговорить с другими",
@@ -86,14 +88,14 @@ async def talk_dialog(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await message.edit_text(text=answer, reply_markup=buttons)
 
 
-async def quiz(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def quiz(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     context.user_data['mode'] = "quiz"
     context.user_data['score'] = 0
     chat_gpt.set_prompt(load_prompt("quiz"))
     return await quiz_theme(update, context)
 
 
-async def quiz_theme(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def quiz_theme(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     await send_text_buttons(update, context, load_message("quiz"), {
         'quiz_prog': 'Программирование',
         'quiz_math': 'Математика',
@@ -101,14 +103,15 @@ async def quiz_theme(update: Update, context: ContextTypes.DEFAULT_TYPE):
     })
 
 
-async def quiz_question(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def quiz_question(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Callable[
+    [Update, Any], Coroutine[Any, Any, None]]:
     await update.callback_query.answer()
     question = await chat_gpt.add_message(update.callback_query.data)
     await send_text(update, context, question)
     return quiz_answer
 
 
-async def quiz_answer(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def quiz_answer(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     answer = await chat_gpt.add_message(update.message.text)
     if answer == 'Правильно!':
         context.user_data['score'] = context.user_data.get('score', 0) + 1
@@ -121,7 +124,7 @@ async def quiz_answer(update: Update, context: ContextTypes.DEFAULT_TYPE):
                             })
 
 
-async def resume(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def resume(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     context.user_data['mode'] = "resume"
     context.user_data['resume_dialog'] = {}
     context.user_data['resume_dialog_count'] = 0
@@ -130,7 +133,7 @@ async def resume(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await send_text(update, context, "Введите название желаемой вакансии")
 
 
-async def resume_dialog(update, context):
+async def resume_dialog(update, context) -> None:
     text = update.message.text
     context.user_data['resume_dialog_count'] += 1
 
@@ -159,13 +162,13 @@ async def resume_dialog(update, context):
         await my_message.edit_text(text=answer, reply_markup=buttons)
 
 
-async def image_recognition(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def image_recognition(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     context.user_data['mode'] = "image_recognition"
     await send_image(update, context, "image_recognition")
     await send_text(update, context, load_message("image_recognition"))
 
 
-async def recognition_result(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def recognition_result(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     image_id = update.message.photo[-1].file_id if update.message.photo else \
         update.message.document.file_id if update.message.document else update.message.sticker.file_id
     image_file_url = await context.bot.get_file(image_id)
@@ -182,7 +185,7 @@ async def recognition_result(update: Update, context: ContextTypes.DEFAULT_TYPE)
     await message.edit_text(text=answer, reply_markup=buttons)
 
 
-async def mode_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def mode_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     match context.user_data['mode']:
         case 'start':
             await start(update, context)
@@ -200,7 +203,7 @@ async def mode_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await recognition_result(update, context)
 
 
-async def cb_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def cb_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     await update.callback_query.answer()
     query = update.callback_query.data
     if query in ('talk_cobain', 'talk_queen', 'talk_tolkien', 'talk_nietzsche', 'talk_hawking'):
