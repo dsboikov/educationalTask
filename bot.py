@@ -9,6 +9,15 @@ from util import (load_message, send_text, send_image, show_main_menu, default_c
                   load_prompt, dialog_user_info_to_str, send_text_buttons, prepare_text_buttons,
                   send_text_with_prepared_buttons)
 from mimetypes import MimeTypes
+import logging
+
+logging.basicConfig(
+    level=logging.DEBUG,
+    filename="logs/bot.log",
+    format="%(asctime)s - %(module)s - %(levelname)s - %(funcName)s: %(lineno)d - %(message)s",
+    datefmt='%H:%M:%S',
+    )
+
 
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -169,8 +178,13 @@ async def image_recognition(update: Update, context: ContextTypes.DEFAULT_TYPE) 
 
 
 async def recognition_result(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    image_id = update.message.photo[-1].file_id if update.message.photo else \
-        update.message.document.file_id if update.message.document else update.message.sticker.file_id
+    try:
+        image_id = update.message.photo[-1].file_id if update.message.photo else \
+            update.message.document.file_id if update.message.document else update.message.sticker.file_id
+    except AttributeError:
+        logging.error("Не удалось получить id изображения")
+        logging.error(update.message)
+
     image_file_url = await context.bot.get_file(image_id)
     mime_type = mime.guess_type(image_file_url.file_path)[0]
     if 'image' not in mime_type:
