@@ -6,6 +6,7 @@ from gpt import ChatGptService
 from util import (load_message, send_text, send_image, show_main_menu, default_callback_handler,
                   load_prompt, dialog_user_info_to_str, send_text_buttons, prepare_text_buttons,
                   send_text_with_prepared_buttons)
+from mimetypes import MimeTypes
 
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -164,8 +165,21 @@ async def image_recognition(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await send_text(update, context, load_message("image_recognition"))
 
 
-async def recognition_dialog(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    pass
+async def recognition_result(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    image_id = update.message.photo[-1].file_id if update.message.photo else \
+        update.message.document.file_id if update.message.document else update.message.sticker.file_id
+    image_file_url = await context.bot.get_file(image_id)
+    mime_type = mime.guess_type(image_file_url.file_path)[0]
+    if 'image' not in mime_type:
+        await send_text(update, context, "Неподдерживаемый тип файла")
+        return
+    buttons = await prepare_text_buttons({
+        "start": "Закончить",
+        "image_recognition": "⭐️ Ещё ⭐️",
+    })
+    message = await send_text_with_prepared_buttons(update, context, 'Минуточку, присмотрюсь...', buttons)
+    answer = await chat_gpt.send_question_with_image(load_prompt("image_recognition"), image_file_url.file_path)
+    await message.edit_text(text=answer, reply_markup=buttons)
 
 
 async def mode_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -182,49 +196,37 @@ async def mode_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await quiz_answer(update, context)
         case 'resume':
             await resume_dialog(update, context)
+        case "image_recognition":
+            await recognition_result(update, context)
 
 
 async def cb_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.callback_query.answer()
     query = update.callback_query.data
-    match query:
-        case 'start':
-            await start(update, context)
-        case 'random_more':
-            await random(update, context)
-        case 'change_talk':
-            await talk(update, context)
-        case "talk_cobain":
-            await talk_button(update, context)
-        case "talk_queen":
-            await talk_button(update, context)
-        case "talk_tolkien":
-            await talk_button(update, context)
-        case "talk_nietzsche":
-            await talk_button(update, context)
-        case "talk_hawking":
-            await talk_button(update, context)
-        case "quiz_prog":
-            await quiz_question(update, context)
-        case "quiz_math":
-            await quiz_question(update, context)
-        case "quiz_biology":
-            await quiz_question(update, context)
-        case "quiz_theme":
-            await quiz_question(update, context)
-        case "quiz_more":
-            await quiz_question(update, context)
-        case "quiz_change":
-            await quiz_theme(update, context)
-        case "resume_dialog":
-            await resume_dialog(update, context)
-        case "image_recognition":
-            await recognition_dialog(update, context)
-        case _:
-            await default_callback_handler(update, context)
+    if query in ('talk_cobain', 'talk_queen', 'talk_tolkien', 'talk_nietzsche', 'talk_hawking'):
+        await talk_button(update, context)
+    elif query in ('quiz_prog', 'quiz_math', 'quiz_biology', 'quiz_theme', 'quiz_more'):
+        await quiz_question(update, context)
+    else:
+        match query:
+            case 'start':
+                await start(update, context)
+            case 'random_more':
+                await random(update, context)
+            case 'change_talk':
+                await talk(update, context)
+            case "quiz_change":
+                await quiz_theme(update, context)
+            case "resume_dialog":
+                await resume_dialog(update, context)
+            case "image_recognition":
+                await image_recognition(update, context)
+            case _:
+                await default_callback_handler(update, context)
 
 
 ob_keys = Keys()
+mime = MimeTypes()
 commands_tuple = (
     ('start', start),
     ('random', random),
