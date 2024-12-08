@@ -16,8 +16,7 @@ logging.basicConfig(
     filename="logs/bot.log",
     format="%(asctime)s - %(module)s - %(levelname)s - %(funcName)s: %(lineno)d - %(message)s",
     datefmt='%H:%M:%S',
-    )
-
+)
 
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -178,6 +177,7 @@ async def image_recognition(update: Update, context: ContextTypes.DEFAULT_TYPE) 
 
 
 async def recognition_result(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    image_id = None
     try:
         image_id = update.message.photo[-1].file_id if update.message.photo else \
             update.message.document.file_id if update.message.document else update.message.sticker.file_id
